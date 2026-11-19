@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>heriTrac</title>
+<meta name="description" content="A family tree that works out what everyone is to you, instead of asking you to type it in.">
+<!-- The page runs no script at all, so the policy can refuse every kind of
+     code outright. The only thing it has to permit is the form posting to
+     the service that forwards it as mail. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action https://api.web3forms.com; base-uri 'none'; object-src 'none'">
+<link rel="icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap">
+<style>
+  /* The same neutrals the app uses, so moving from this page into the tool
+     is not a change of scene. Every value is saturation zero. */
+  :root {
+    --bg: #f0f0f0; --surface: #ffffff; --line: #dbdbdb; --line-soft: #ebebeb;
+    --text: #242424; --muted: #5a5a5a; --faint: #717171; --field: #ffffff;
+    --ui: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141414; --surface: #1c1c1c; --line: #343434; --line-soft: #272727;
+      --text: #ededed; --muted: #b8b8b8; --faint: #959595; --field: #202020;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141414; --surface: #1c1c1c; --line: #343434; --line-soft: #272727;
+    --text: #ededed; --muted: #b8b8b8; --faint: #959595; --field: #202020;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 400 16px/1.55 var(--ui);
+    padding: 0 16px;
+  }
+  .sheet {
+    max-width: 44rem; margin: 0 auto; background: var(--surface);
+    border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+    padding: 0 clamp(20px, 5vw, 56px) 56px;
+    min-height: 100vh;
+  }
+
+  /* A record sheet's masthead: the name, then a rule, then what it is. */
+  header { padding: clamp(40px, 8vw, 72px) 0 0; }
+  h1 {
+    margin: 0; font-weight: 600; font-size: clamp(30px, 7vw, 42px);
+    letter-spacing: -.015em; line-height: 1.1;
+  }
+  .lede {
+    margin: 14px 0 0; font-size: clamp(16px, 2.4vw, 19px); color: var(--muted);
+    max-width: 34rem;
+  }
+  .rule { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+
+  .go { margin: 28px 0 0; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: baseline; }
+  .go a.primary {
+    display: inline-block; text-decoration: none; color: var(--surface);
+    background: var(--text); padding: 11px 22px; font-weight: 600; font-size: 15px;
+    border: 1px solid var(--text);
+  }
+  .go a.primary:hover { background: var(--muted); border-color: var(--muted); }
+  .go a.plain { color: var(--muted); font-size: 14px; }
+
+  section { padding: 30px 0 0; }
+  .num {
+    font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--faint); font-weight: 600; display: block; margin-bottom: 7px;
+  }
+  h2 { margin: 0 0 10px; font-size: 17px; font-weight: 600; letter-spacing: -.005em; }
+  p { margin: 0 0 12px; max-width: 34rem; color: var(--muted); }
+  p.body { color: var(--text); }
+  a { color: var(--text); text-underline-offset: 2px; }
+
+  dl { margin: 0; }
+  dt { font-weight: 600; font-size: 15px; margin-top: 14px; }
+  dd { margin: 3px 0 0; color: var(--muted); max-width: 34rem; }
+
+  form { margin: 14px 0 0; max-width: 32rem; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 5px; }
+  input, textarea {
+    width: 100%; font: inherit; font-size: 15px; color: var(--text);
+    background: var(--field); border: 1px solid var(--line);
+    padding: 9px 11px; border-radius: 0;
+  }
+  textarea { min-height: 120px; resize: vertical; }
+  input:focus, textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
+  button {
+    margin-top: 16px; font: inherit; font-weight: 600; font-size: 15px;
+    color: var(--surface); background: var(--text);
+    border: 1px solid var(--text); padding: 10px 22px; cursor: pointer;
+  }
+  button:hover { background: var(--muted); border-color: var(--muted); }
+  /* Named so a bot fills it in and a person never sees it. */
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  footer {
+    margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line-soft);
+    font-size: 13px; color: var(--faint);
+  }
+  footer a { color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <h1>heriTrac</h1>
+    <p class="lede">A family tree that works out what everyone is to you, instead of asking you to type it in.</p>
+    <div class="go">
+      <a class="primary" href="/app">Open heriTrac</a>
+      <a class="plain" href="/heritrac.html" download>Download the single file</a>
+    </div>
+    <hr class="rule">
+  </header>
+
+  <section>
+    <span class="num">01 / What it is</span>
+    <h2>You record who is related to whom. It works out the rest.</h2>
+    <p class="body">
+      Add a parent, a partner, a child or a sibling, and every other word follows from
+      the shape of the family. Pick anyone as the viewpoint and the whole tree relabels
+      itself around them: your grandmother's brother becomes your great uncle, and from
+      your cousin's side he is a grandfather.
+    </p>
+    <p>
+      Only the links are stored. No relationship is ever typed in, so none of them can
+      disagree with each other.
+    </p>
+  </section>
+
+  <section>
+    <span class="num">02 / What it keeps</span>
+    <h2>Nothing.</h2>
+    <dl>
+      <dt>No account</dt>
+      <dd>There is nothing to sign up for and nothing to sign in to.</dd>
+      <dt>No storage</dt>
+      <dd>The family lives in the browser tab and leaves as a file you keep. Close the tab and it is gone.</dd>
+      <dt>No tracking</dt>
+      <dd>No analytics, no cookies, no third party scripts. The page asks the network for two fonts and nothing else.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <span class="num">03 / What is coming</span>
+    <h2>Shareable links, as an option.</h2>
+    <p>
+      A link you can send to a relative so they can look at the family, and sign in if
+      they want to help build it. Working entirely offline stays the default, because
+      that is the part worth protecting.
+    </p>
+  </section>
+
+  <section>
+    <span class="num">04 / Tell me it is wrong</span>
+    <h2>Especially if a word for a relative is off.</h2>
+    <p>
+      Kinship words differ between languages and between families. If heriTrac calls
+      somebody the wrong thing, that is the most useful thing you can report.
+    </p>
+    <form action="https://api.web3forms.com/submit" method="POST">
+      <input type="hidden" name="access_key" value="a751ffd4-a13c-48b6-b513-23450e2e4831">
+      <input type="hidden" name="subject" value="heriTrac feedback">
+      <input type="hidden" name="from_name" value="heriTrac">
+      <label for="f-name">Name</label>
+      <input id="f-name" type="text" name="name" required autocomplete="name">
+      <label for="f-mail">Email</label>
+      <input id="f-mail" type="email" name="email" required autocomplete="email">
+      <label for="f-msg">What happened</label>
+      <textarea id="f-msg" name="message" required></textarea>
+      <div class="trap" aria-hidden="true">
+        <label for="f-bot">Leave this empty</label>
+        <input id="f-bot" type="checkbox" name="botcheck" tabindex="-1" autocomplete="off">
+      </div>
+      <button type="submit">Send</button>
+    </form>
+  </section>
+
+  <footer>
+    Built by <a href="https://pranavrajendran.com">Pranav Rajendran</a>.
+    Source on <a href="https://github.com/TheKimi7/heritrac">GitHub</a>.
+  </footer>
+
+</div>
+</body>
+</html>

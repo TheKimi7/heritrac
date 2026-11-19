@@ -77,9 +77,12 @@ function emit() {
   mkdirSync("dist", { recursive: true });
 
   // dist/ is exactly what gets published to the web and nothing else, so a
-  // host can be pointed straight at it. index.html so that a bare domain
-  // serves the app; heritrac.html stays beside it as the name to download.
-  writeFileSync("dist/index.html", [
+  // host can be pointed straight at it. The landing page takes the root and
+  // the app sits under /app, because the landing page posts a feedback form
+  // to another origin and the app must go on refusing to post anywhere at
+  // all. Two pages, two policies, rather than one policy loosened for both.
+  mkdirSync("dist/app", { recursive: true });
+  writeFileSync("dist/app/index.html", [
     '<!doctype html>',
     '<html lang="en"><head>',
     '<meta charset="utf-8">',
@@ -96,7 +99,13 @@ function emit() {
     '</body></html>'
   ].join("\n"));
 
-  copyFileSync("dist/index.html", "dist/heritrac.html");
+  // The same page under the name it downloads as, kept at the root so the
+  // link on the landing page is a plain file rather than a directory.
+  copyFileSync("dist/app/index.html", "dist/heritrac.html");
+
+  // The landing page is plain HTML with no build step: it has no script, so
+  // there is no hash to compute and nothing to inline.
+  copyFileSync("src/landing.html", "dist/index.html");
 
   // Neither of these belongs on the website. The artifact page carries no
   // content policy, because the viewer injects a runtime of its own, and the
@@ -120,7 +129,8 @@ function emit() {
   }
 
   const kb = (f) => (readFileSync(f).length / 1024).toFixed(1) + " KB";
-  console.log("dist/index.html  " + kb("dist/index.html"));
+  console.log("dist/index.html      " + kb("dist/index.html") + "  (landing)");
+  console.log("dist/app/index.html  " + kb("dist/app/index.html") + "  (app)");
 }
 
 if (watch) {

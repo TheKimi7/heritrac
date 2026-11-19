@@ -34,9 +34,21 @@ among them. The menu button hides the panel when you want the whole canvas.
     node build.mjs          # or: npm run build
 
 That writes **`dist/`, which is exactly the website and nothing else**: point
-a host at that folder and it serves. `index.html` is one self-contained file
-with React, React Flow, the stylesheet and the engine inlined, and
-`heritrac.html` beside it is the same file under the name it downloads as.
+a host at that folder and it serves.
+
+    dist/index.html       the landing page, from src/landing.html
+    dist/app/index.html   the app, served at /app
+    dist/heritrac.html    the same app under the name it downloads as
+
+The app is one self-contained file with React, React Flow, the stylesheet and
+the engine inlined.
+
+The two pages are split because they need different content policies. The
+landing page posts a feedback form to another origin, so it has to allow a
+form action; the app must go on refusing to post anywhere at all. Keeping
+them apart means the app's `default-src 'none'` is never loosened to suit a
+contact form. The landing page runs no script of its own, so it refuses code
+outright with `script-src 'none'`.
 
 Two things the build makes that are deliberately **not** in `dist/`, because
 neither belongs on a public site: `build/page.html`, the same page without a
@@ -63,10 +75,11 @@ output directory, so a Vercel project needs no settings: it runs
 `cname.vercel-dns.com`, or an A record to `76.76.21.21` for a bare domain.
 
 **Under a path on a site you already have.** On a Vite site, copy
-`dist/index.html` to `public/heritrac/index.html`: Vite passes `public/`
+`dist/app/index.html` to `public/heritrac/index.html`: Vite passes `public/`
 through untouched, and a real file beats the SPA fallback, so the page answers
-at `/heritrac/`. Nothing in the page uses an absolute path, so it does not
-care what it is served under.
+at `/heritrac/`. Nothing in the app uses an absolute path, so it does not care
+what it is served under. The landing page does reference `/favicon.svg`, so it
+expects to sit at a site root.
 
 **As a file.** `dist/heritrac.html` works from a USB stick or an email
 attachment, opened with `file://`. It needs no icons beside it: the same SVG
