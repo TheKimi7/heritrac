@@ -866,6 +866,92 @@ window.__XSS__ = 0;
         ok("and are no longer drawn as dead", !dashed());
       }
 
+      // ---- Clear chart, the X beside it, and the tour ----
+      // One action behind two controls, so both are pressed, and the
+      // confirmation that stands in front of unsaved work is checked on the
+      // quick one rather than only on the buried one.
+      var blank = document.getElementById("blank");
+      ok("the panel button says Clear chart", blank && blank.textContent === "Clear chart",
+        blank ? blank.textContent : "missing");
+      var xbtn = document.getElementById("clear");
+      ok("an X in the corner does the same thing",
+        !!xbtn && xbtn.getAttribute("aria-label") === "Clear chart",
+        xbtn ? xbtn.getAttribute("aria-label") : "missing");
+
+      // Start from a freshly loaded sample. Earlier checks leave unsaved work
+      // behind, so the first press is met by the confirmation and answered.
+      click(document.getElementById("sample"));
+      await tick(240);
+      if (document.getElementById("confirm-go")) click(document.getElementById("confirm-go"));
+      await tick(400);
+      ok("a freshly loaded sample counts as saved", !document.getElementById("unsaved"),
+        document.getElementById("unsaved") ? "still marked unsaved" : "clean");
+      click(document.getElementById("clear"));
+      await tick(340);
+      ok("the X clears an untouched sample without asking",
+        !document.getElementById("confirmbar") && document.querySelectorAll(".card").length === 1,
+        document.querySelectorAll(".card").length + " cards, bar " +
+          (document.getElementById("confirmbar") ? "shown" : "absent"));
+
+      // Now there is something to lose, so the same button has to stop.
+      click(node("me").querySelector(".card"));
+      await tick(200);
+      setValue(document.getElementById("pname"), "Someone Else");
+      click(document.getElementById("psave"));
+      await tick(260);
+      ok("editing marks the tree unsaved", !!document.getElementById("unsaved"));
+      click(document.getElementById("clear"));
+      await tick(300);
+      ok("so the X asks first once there is unsaved work",
+        !!document.getElementById("confirmbar"));
+      click(document.getElementById("confirm-no"));
+      await tick(200);
+      ok("and cancelling leaves the family alone",
+        !!node("me") && node("me").querySelector(".card-name").textContent === "Someone Else",
+        node("me") ? node("me").querySelector(".card-name").textContent : "gone");
+
+      // The tour. A step whose target measures zero would leave the ring in
+      // the top corner pointing at nothing, which is exactly how a step
+      // inside the closed panel fails, so every step is measured.
+      var sideWas = !document.querySelector(".side").hidden;
+      var storeBefore = localStorage.length + ":" + sessionStorage.length;
+      click(document.getElementById("tour"));
+      await tick(360);
+      ok("the tour opens on demand", !!document.getElementById("tourbubble"));
+      var steps = 0, badSteps = [];
+      while (document.getElementById("tourbubble") && steps < 20) {
+        steps++;
+        var ring = document.getElementById("tourring");
+        if (!ring) badSteps.push("step " + steps + " rings nothing");
+        else {
+          var rr = ring.getBoundingClientRect();
+          if (rr.width < 10 || rr.height < 10) {
+            badSteps.push("step " + steps + " ring " + (rr.width | 0) + "x" + (rr.height | 0));
+          }
+        }
+        var nx = document.getElementById("tournext");
+        if (!nx) break;
+        click(nx);
+        await tick(380);
+      }
+      ok("every tour step rings something with a real size", badSteps.length === 0,
+        badSteps.join(" | "));
+      ok("the tour runs through all of its steps and closes",
+        steps === 8 && !document.getElementById("tourbubble"), steps + " steps");
+
+      click(document.getElementById("tour"));
+      await tick(340);
+      ok("it can be opened again", !!document.getElementById("tourbubble"));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await tick(300);
+      ok("escape leaves the tour", !document.getElementById("tourbubble"));
+      ok("and the panel is left the way it was found",
+        (!document.querySelector(".side").hidden) === sideWas,
+        "was " + sideWas + ", now " + (!document.querySelector(".side").hidden));
+      ok("the tour wrote nothing to storage",
+        (localStorage.length + ":" + sessionStorage.length) === storeBefore,
+        storeBefore + " before, " + localStorage.length + ":" + sessionStorage.length + " after");
+
       ok("still no script errors", errors.length === 0, errors.join(" | "));
       ok("and the canvas settled without a stuck resize loop", observerNotices < 3,
         observerNotices + " ResizeObserver notices");

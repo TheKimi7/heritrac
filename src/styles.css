@@ -652,3 +652,59 @@ input[type="range"] { flex: 1 1 auto; accent-color: var(--accent); }
   .sheet { width: 100%; max-height: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* The clear button, in the corner opposite the panel button. It mirrors the
+   brandbar rather than the round dock buttons, because it belongs to the same
+   row of chrome across the top. */
+.clearbtn {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  top: max(12px, env(safe-area-inset-top, 0px));
+  z-index: 10;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.clearbtn:hover { color: var(--text); border-color: var(--line); }
+.tourbtn { font-size: 13px; padding-left: 6px; padding-right: 6px; margin-left: 2px; }
+
+/* The tour. The ring is a hole in a single large shadow, so there is one
+   element to place instead of four edges to keep aligned. */
+.tour-block { position: fixed; inset: 0; z-index: 39; }
+.tour-ring {
+  position: fixed;
+  z-index: 40;
+  border-radius: 12px;
+  /* The dim is always dark, in both schemes, so the ring on its edge is
+     always light. A themed ring would vanish into the dim in one of them. */
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55);
+  outline: 2px solid rgba(255, 255, 255, .92);
+  pointer-events: none;
+}
+.tour-bubble {
+  position: fixed;
+  z-index: 41;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  width: min(420px, calc(100vw - 24px));
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: var(--sp-4);
+}
+/* Pointing at something in the lower half, so the bubble moves out of its way. */
+.tour-bubble.is-top { bottom: auto; top: calc(22px + env(safe-area-inset-top, 0px)); }
+.tour-title { display: block; margin: 2px 0 var(--sp-2); font-size: 15px; }
+.tour-bubble .note { margin-top: 0; }
+.tour-row { margin-top: var(--sp-4); justify-content: flex-end; }
+.tour-row .btn-quiet { margin-right: auto; }

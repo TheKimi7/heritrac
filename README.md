@@ -107,7 +107,7 @@ things try to stop that happening by accident:
    something would be lost, which also leaves the page eligible for the
    back/forward cache the rest of the time.
 3. A confirmation before anything replaces the whole family: Upload, Paste,
-   Start empty and Load the sample all ask first, and offer to save. Not
+   Clear chart and Load the sample all ask first, and offer to save. Not
    `window.confirm`, which an embedded frame is allowed to suppress.
 
 **Where the warning does not work.** It is unreliable on phones, iOS Safari

@@ -36,8 +36,61 @@ const Icon = {
   burger: "M3 6h14M3 10h14M3 14h14",
   plus: "M10 4v12M4 10h12",
   minus: "M4 10h12",
-  fit: "M4 7V4h3M16 7V4h-3M4 13v3h3M16 13v3h-3"
+  fit: "M4 7V4h3M16 7V4h-3M4 13v3h3M16 13v3h-3",
+  cross: "M5 5l10 10M15 5L5 15"
 };
+
+// The tour. It never starts on its own and remembers nothing it has shown:
+// there is no store to remember it in, and one that reappeared on every
+// visit would be a nuisance rather than a help. `side` marks a step that
+// points inside the panel, which is hidden when closed and so measures zero
+// until it is opened and scrolled to.
+const TOUR = [
+  {
+    sel: ".card.is-ego",
+    fit: true,
+    title: "Everything is said from one card",
+    body: "The ringed card is the viewpoint. Every word on every other card is what that person would call them. Select any card and choose View as to move the viewpoint there."
+  },
+  {
+    sel: ".card.is-ego",
+    title: "Add relatives from the card itself",
+    body: "Point at a card and a + appears on each of its four sides. Up is a parent, down a child, left a brother or sister, right a partner. Drag from a side onto another card to link two people who are already here."
+  },
+  {
+    sel: "#dockadd",
+    title: "Or start somebody loose",
+    body: "New card adds a person joined to nobody, ready to link up later. The two buttons above it zoom, and the one below fits the whole family on screen."
+  },
+  {
+    sel: "#clear",
+    title: "Clear chart",
+    body: "Empties the screen and starts you again with a single card. If there is unsaved work it asks first, and offers to save it."
+  },
+  {
+    sel: "#burger",
+    title: "The panel holds the rest",
+    body: "Search, your own words for people, and the file buttons all live in there. On a narrow screen it covers the family, so it opens and closes."
+  },
+  {
+    sel: "#q",
+    side: true,
+    title: "Find someone",
+    body: "Type any part of a name. Choosing a result selects that card and brings it into view."
+  },
+  {
+    sel: "#dl",
+    side: true,
+    title: "Download before you close the tab",
+    body: "Nothing is kept anywhere: not on a server, and not in this browser either. The family lives in this tab alone, so it goes when the tab does unless you download it first."
+  },
+  {
+    sel: "#sample",
+    side: true,
+    title: "Load the sample",
+    body: "A ready made family to look around in. Loading it replaces what is on screen, so download yours first if you want to keep it."
+  }
+];
 
 function Glyph({ d, size = 18 }) {
   return (
@@ -81,6 +134,9 @@ function Flow() {
   const [toast, setToast] = useState(null);
   const [moved, setMoved] = useState({});
   const [sideOpen, setSideOpen] = useState(() => window.innerWidth > 900);
+  const [tour, setTour] = useState(null);
+  const [spot, setSpot] = useState(null);
+  const tourNext = useRef(null);
   const [linkKind, setLinkKind] = useState("child");
   const [linkWho, setLinkWho] = useState("");
   const anchor = useRef(null);
@@ -510,6 +566,81 @@ function Flow() {
     }
   }, [layout, ego, flow, sideOpen]);
 
+  // One action behind two controls: the panel button and the X in the corner.
+  const clearChart = () => guard("Clearing the chart removes the family on screen.", () => {
+    setSelected(null);
+    setTreeSaved(emptyTree(), "Cleared. Start with yourself.");
+  });
+
+  const startTour = () => { setSpot(null); setTour({ i: 0, restore: sideOpen }); };
+  // Leaving puts the panel back the way the reader had it, since the tour
+  // opens and closes it to reach what each step points at.
+  const endTour = () => {
+    if (tour) setSideOpen(tour.restore);
+    setTour(null);
+    setSpot(null);
+  };
+
+  // Framing the family happens once per step, in its own effect. Done inside
+  // the measuring effect below it would retrigger that effect through React
+  // Flow's own state, which cancelled the measurement before it ever ran.
+  const fitted = useRef(-1);
+  useEffect(() => {
+    if (!tour) { fitted.current = -1; return; }
+    if (fitted.current === tour.i) return;
+    fitted.current = tour.i;
+    if (TOUR[tour.i].fit) flow.fitView({ padding: 0.2, duration: 0 });
+  }, [tour, flow]);
+
+  // Measuring the thing a step points at. A step inside the panel needs the
+  // panel open and the target scrolled into the panel's own scroll box
+  // first, or it measures zero and the ring lands in the corner. Measured
+  // twice because the panel and the scroll both settle a frame or two late,
+  // and the same rectangle is returned by identity so a second measurement
+  // that agrees with the first does not start a render loop.
+  useEffect(() => {
+    if (!tour) { setSpot(null); return undefined; }
+    const step = TOUR[tour.i];
+    const narrow = window.innerWidth <= 900;
+    if (step.side && !sideOpen) { setSideOpen(true); return undefined; }
+    if (!step.side && narrow && sideOpen) { setSideOpen(false); return undefined; }
+    // The ring follows its target for as long as the step is up, rather than
+    // being placed once. Framing the family, the panel opening, a late font
+    // and a window being resized all move the target after any single
+    // measurement would have been taken, and each of those left the ring
+    // sitting on empty canvas. The rectangle is returned by identity when it
+    // has not moved, so a tick that agrees with the last one renders nothing.
+    // A timer rather than an animation frame: frames are not served to a
+    // page the browser considers hidden, which is every headless run.
+    const track = () => {
+      const el = document.querySelector(step.sel);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (!r.width && !r.height) return;
+      setSpot((prev) =>
+        prev && prev.x === r.left && prev.y === r.top && prev.w === r.width && prev.h === r.height
+          ? prev
+          : { x: r.left, y: r.top, w: r.width, h: r.height });
+    };
+    if (step.side) {
+      const el = document.querySelector(step.sel);
+      if (el) el.scrollIntoView({ block: "nearest" });
+    }
+    track();
+    const timer = setInterval(track, 120);
+    return () => clearInterval(timer);
+  }, [tour, sideOpen]);
+
+  // Escape leaves the tour, and the Next button takes focus on every step so
+  // the whole thing can be walked from the keyboard.
+  useEffect(() => {
+    if (!tour) return undefined;
+    const bail = (e) => { if (e.key === "Escape") { e.stopPropagation(); endTour(); } };
+    window.addEventListener("keydown", bail, true);
+    if (tourNext.current) tourNext.current.focus();
+    return () => window.removeEventListener("keydown", bail, true);
+  }, [tour]);
+
   return (
     <div className={"app" + (sideOpen ? " side-open" : "")}>
       <div className="brandbar">
@@ -521,8 +652,19 @@ function Flow() {
           onClick={() => setSideOpen(!sideOpen)}
         ><Glyph d={Icon.burger} /></button>
         <span className="brandname">heriTrac</span>
+        <button className="btn btn-quiet tourbtn" id="tour" onClick={startTour}>Tour</button>
         {dirty && <span className="chip chip-warn" id="unsaved">Unsaved</span>}
       </div>
+
+      {/* The opposite corner to the panel button, and far from it: clearing
+          everything should not sit next to the control people reach for most. */}
+      <button
+        className="clearbtn"
+        id="clear"
+        title="Clear chart"
+        aria-label="Clear chart"
+        onClick={clearChart}
+      ><Glyph d={Icon.cross} /></button>
 
       <aside className="side" hidden={!sideOpen}>
         <header className="side-head">
@@ -769,7 +911,7 @@ function Flow() {
               }}
             >Copy</button>
             <button className="btn" id="paste" onClick={() => guard("Pasting a family replaces the one on screen.", () => setSheet({ mode: "paste", text: "" }))}>Paste</button>
-            <button className="btn" id="blank" onClick={() => guard("Starting empty clears the family on screen.", () => { setSelected(null); setTreeSaved(emptyTree(), "Empty tree. Start with yourself."); })}>Start empty</button>
+            <button className="btn" id="blank" onClick={clearChart}>Clear chart</button>
             <button className="btn" id="sample" onClick={() => guard("Loading the sample replaces the family on screen.", () => { setSelected(null); adopt(JSON.stringify(SAMPLE), "Sample family loaded."); })}>Load the sample</button>
           </div>
           <input
@@ -783,7 +925,7 @@ function Flow() {
               guard("Opening a file replaces the family on screen.", () => onFile(file));
             }}
           />
-          <p className="note">Everything stays in this browser. Download a copy before you clear site data.</p>
+          <p className="note">Nothing is stored, here or anywhere else. The family lives in this tab alone, so download it before you close the tab.</p>
         </div>
       </aside>
 
@@ -867,6 +1009,45 @@ function Flow() {
 
         {toast && <div className="toast">{toast}</div>}
       </div>
+
+      {tour && (
+        <div className="tour">
+          {/* The dim is the ring's own shadow, so the lit patch is a real
+              hole rather than four strips that have to be kept in step.
+              This blocker only catches clicks the ring lets through. */}
+          <div className="tour-block" onClick={endTour} />
+          {spot && (
+            <div
+              className="tour-ring"
+              id="tourring"
+              style={{ left: spot.x - 6, top: spot.y - 6, width: spot.w + 12, height: spot.h + 12 }}
+            />
+          )}
+          <div
+            className={"tour-bubble" + (spot && spot.y + spot.h / 2 > window.innerHeight / 2 ? " is-top" : "")}
+            id="tourbubble"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Tour"
+          >
+            <span className="lab">Step {tour.i + 1} of {TOUR.length}</span>
+            <b className="tour-title">{TOUR[tour.i].title}</b>
+            <p className="note">{TOUR[tour.i].body}</p>
+            <div className="row tour-row">
+              <button className="btn btn-quiet" id="tourskip" onClick={endTour}>Skip</button>
+              {tour.i > 0 && (
+                <button className="btn" id="tourback" onClick={() => setTour({ ...tour, i: tour.i - 1 })}>Back</button>
+              )}
+              <button
+                className="btn btn-go"
+                id="tournext"
+                ref={tourNext}
+                onClick={() => (tour.i + 1 < TOUR.length ? setTour({ ...tour, i: tour.i + 1 }) : endTour())}
+              >{tour.i + 1 < TOUR.length ? "Next" : "Done"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirming && (
         <div className="bar" id="confirmbar">
