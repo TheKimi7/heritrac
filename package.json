@@ -7,12 +7,18 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "dev": "node build.mjs --watch"
+    "dev": "node build.mjs --watch",
+    "test": "node test/engine.test.mjs && node test/rls.test.mjs",
+    "test:engine": "node test/engine.test.mjs",
+    "test:rls": "node test/rls.test.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^13.0.2",
     "esbuild": "^0.28.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17"
   }
 }
