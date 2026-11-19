@@ -38,7 +38,6 @@ a host at that folder and it serves.
 
     dist/index.html       the landing page, from src/landing.html
     dist/app/index.html   the app, served at /app
-    dist/heritrac.html    the same app under the name it downloads as
 
 The app is one self-contained file with React, React Flow, the stylesheet and
 the engine inlined.
@@ -81,11 +80,12 @@ at `/heritrac/`. Nothing in the app uses an absolute path, so it does not care
 what it is served under. The landing page does reference `/favicon.svg`, so it
 expects to sit at a site root.
 
-**As a file.** `dist/heritrac.html` works from a USB stick or an email
+**As a file.** `dist/app/index.html` works from a USB stick or an email
 attachment, opened with `file://`. It needs no icons beside it: the same SVG
 is inlined in its head, so the single file carries its own icon wherever it
-goes. The build still copies `favicon.svg`, `icon-32.png`, `icon-512.png` and
-`apple-touch-icon.png` into `dist/` for a host that prefers real files.
+goes. It is not offered as a download from the site, so anyone who wants it
+builds it. The build still copies `favicon.svg`, `icon-32.png`, `icon-512.png`
+and `apple-touch-icon.png` into `dist/` for a host that prefers real files.
 
 The one thing it reaches out for is the two Google fonts, which the content
 policy allows and nothing else. Self-host them to make the page work with no
@@ -132,7 +132,7 @@ file is the attack surface. What is defended, and how:
   would otherwise come back truthy. Upload and paste are capped at 1 MB and
   2000 people, so a huge file cannot hang the tab. Around thirty crafted files
   are run through the whole pipeline in the engine checks.
-- **Injected script.** `heritrac.html` carries a content security policy built
+- **Injected script.** The app page carries a content security policy built
   at build time from the SHA-256 of the exact bundle inlined into it, with
   `default-src 'none'` so nothing is permitted by omission. An injected inline
   script has no matching hash and does not run. The browser checks assert both

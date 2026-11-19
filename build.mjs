@@ -99,10 +99,6 @@ function emit() {
     '</body></html>'
   ].join("\n"));
 
-  // The same page under the name it downloads as, kept at the root so the
-  // link on the landing page is a plain file rather than a directory.
-  copyFileSync("dist/app/index.html", "dist/heritrac.html");
-
   // The landing page is plain HTML with no build step: it has no script, so
   // there is no hash to compute and nothing to inline.
   copyFileSync("src/landing.html", "dist/index.html");

@@ -14,113 +14,141 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&display=swap">
 <style>
-  /* The same neutrals the app uses, so moving from this page into the tool
-     is not a change of scene. Every value is saturation zero. */
+  /* Every token below is copied from the app's stylesheet rather than chosen
+     again here, so the page the reader lands on and the tool they open are
+     plainly the same thing. Panels, pills and radii follow .side, .btn and
+     .text in src/styles.css. */
   :root {
-    --bg: #f0f0f0; --surface: #ffffff; --line: #dbdbdb; --line-soft: #ebebeb;
-    --text: #242424; --muted: #5a5a5a; --faint: #717171; --field: #ffffff;
+    --bg:          #f0f0f0;
+    --surface:     #ffffff;
+    --surface-2:   #f7f7f7;
+    --surface-3:   #ededed;
+    --line:        #dbdbdb;
+    --line-soft:   #ebebeb;
+    --text:        #242424;
+    --muted:       #5a5a5a;
+    --faint:       #717171;
+    --accent:      #2b2b2b;
+    --accent-soft: #e6e6e6;
+    --accent-text: #242424;
+    --on-accent:   #ffffff;
+    --shadow:      0 1px 2px rgba(0, 0, 0, .07), 0 8px 24px rgba(0, 0, 0, .08);
     --ui: "Google Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --r-card: 14px;
+    --r-pill: 999px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #141414; --surface: #1c1c1c; --line: #343434; --line-soft: #272727;
-      --text: #ededed; --muted: #b8b8b8; --faint: #959595; --field: #202020;
+      --bg: #141414; --surface: #1e1e1e; --surface-2: #242424; --surface-3: #2e2e2e;
+      --line: #363636; --line-soft: #292929; --text: #ededed; --muted: #b8b8b8;
+      --faint: #959595; --accent: #ebebeb; --accent-soft: #333333;
+      --accent-text: #f5f5f5; --on-accent: #171717;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+      color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #141414; --surface: #1c1c1c; --line: #343434; --line-soft: #272727;
-    --text: #ededed; --muted: #b8b8b8; --faint: #959595; --field: #202020;
+    --bg: #141414; --surface: #1e1e1e; --surface-2: #242424; --surface-3: #2e2e2e;
+    --line: #363636; --line-soft: #292929; --text: #ededed; --muted: #b8b8b8;
+    --faint: #959595; --accent: #ebebeb; --accent-soft: #333333;
+    --accent-text: #f5f5f5; --on-accent: #171717;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+    color-scheme: dark;
   }
 
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 400 16px/1.55 var(--ui);
-    padding: 0 16px;
-  }
-  .sheet {
-    max-width: 44rem; margin: 0 auto; background: var(--surface);
-    border-left: 1px solid var(--line); border-right: 1px solid var(--line);
-    padding: 0 clamp(20px, 5vw, 56px) 56px;
-    min-height: 100vh;
+    font: 400 15px/1.6 var(--ui);
+    padding: clamp(12px, 4vw, 40px) max(12px, env(safe-area-inset-left, 0px))
+             clamp(24px, 6vw, 56px) max(12px, env(safe-area-inset-right, 0px));
   }
 
-  /* A record sheet's masthead: the name, then a rule, then what it is. */
-  header { padding: clamp(40px, 8vw, 72px) 0 0; }
-  h1 {
-    margin: 0; font-weight: 600; font-size: clamp(30px, 7vw, 42px);
-    letter-spacing: -.015em; line-height: 1.1;
+  /* The same panel the app floats over its canvas: a surface card on the
+     grey ground, hairline bordered, one soft shadow. */
+  .panel {
+    max-width: 600px; margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
   }
-  .lede {
-    margin: 14px 0 0; font-size: clamp(16px, 2.4vw, 19px); color: var(--muted);
-    max-width: 34rem;
-  }
-  .rule { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+  /* And the app's section rhythm: one rule between sections, none after the
+     last, so the panel ends on its own edge. */
+  .sec { padding: var(--sp-5) clamp(18px, 5vw, 32px); border-bottom: 1px solid var(--line-soft); }
+  .sec:last-child { border-bottom: 0; }
 
-  .go { margin: 28px 0 0; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: baseline; }
-  .go a.primary {
-    display: inline-block; text-decoration: none; color: var(--surface);
-    background: var(--text); padding: 11px 22px; font-weight: 600; font-size: 15px;
-    border: 1px solid var(--text);
-  }
-  .go a.primary:hover { background: var(--muted); border-color: var(--muted); }
-  .go a.plain { color: var(--muted); font-size: 14px; }
-
-  section { padding: 30px 0 0; }
-  .num {
-    font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
-    color: var(--faint); font-weight: 600; display: block; margin-bottom: 7px;
-  }
-  h2 { margin: 0 0 10px; font-size: 17px; font-weight: 600; letter-spacing: -.005em; }
-  p { margin: 0 0 12px; max-width: 34rem; color: var(--muted); }
+  h1 { margin: 0; font-weight: 600; font-size: clamp(26px, 6vw, 34px); letter-spacing: -.015em; line-height: 1.15; }
+  .lede { margin: var(--sp-3) 0 0; font-size: 17px; color: var(--muted); }
+  h2 { margin: 0 0 var(--sp-2); font-size: 16px; font-weight: 600; letter-spacing: -.005em; }
+  p { margin: 0 0 var(--sp-3); color: var(--muted); }
+  p:last-child { margin-bottom: 0; }
   p.body { color: var(--text); }
   a { color: var(--text); text-underline-offset: 2px; }
 
-  dl { margin: 0; }
-  dt { font-weight: 600; font-size: 15px; margin-top: 14px; }
-  dd { margin: 3px 0 0; color: var(--muted); max-width: 34rem; }
+  /* .lab, to the app's values. Plain words, never numbered. */
+  .lab {
+    display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .9px;
+    text-transform: uppercase; color: var(--faint); margin-bottom: var(--sp-2);
+  }
 
-  form { margin: 14px 0 0; max-width: 32rem; }
-  label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 5px; }
+  /* .btn and .btn-go, lifted from the app. */
+  .btn {
+    display: inline-block; text-decoration: none;
+    background: var(--surface-2); border: 1px solid var(--line-soft);
+    border-radius: var(--r-pill); padding: 9px 18px;
+    font: inherit; font-size: 14px; font-weight: 500; color: var(--text);
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn-go { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn-go:hover { background: var(--text); border-color: var(--text); color: var(--on-accent); }
+  .go { margin-top: var(--sp-4); }
+
+  dl { margin: 0; }
+  dt { font-weight: 500; font-size: 15px; color: var(--text); margin-top: var(--sp-3); }
+  dt:first-child { margin-top: 0; }
+  dd { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+
+  form { margin-top: var(--sp-3); }
+  label { display: block; font-size: 13px; font-weight: 500; margin: var(--sp-3) 0 var(--sp-2); }
+  /* .text, to the app's values. A pill radius on a multi-line box would read
+     as a stadium, so the message field takes the card radius instead. */
   input, textarea {
     width: 100%; font: inherit; font-size: 15px; color: var(--text);
-    background: var(--field); border: 1px solid var(--line);
-    padding: 9px 11px; border-radius: 0;
+    background: var(--surface-2); border: 1px solid var(--line-soft);
+    border-radius: var(--r-pill); padding: 9px 14px;
   }
-  textarea { min-height: 120px; resize: vertical; }
-  input:focus, textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
-  button {
-    margin-top: 16px; font: inherit; font-weight: 600; font-size: 15px;
-    color: var(--surface); background: var(--text);
-    border: 1px solid var(--text); padding: 10px 22px; cursor: pointer;
-  }
-  button:hover { background: var(--muted); border-color: var(--muted); }
+  textarea { border-radius: var(--r-card); min-height: 110px; resize: vertical; }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* Named so a bot fills it in and a person never sees it. */
   .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
   footer {
-    margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line-soft);
+    max-width: 600px; margin: var(--sp-4) auto 0;
+    padding: 0 clamp(18px, 5vw, 32px);
     font-size: 13px; color: var(--faint);
   }
   footer a { color: var(--faint); }
 </style>
 </head>
 <body>
-<div class="sheet">
 
-  <header>
+<main class="panel">
+
+  <div class="sec">
     <h1>heriTrac</h1>
     <p class="lede">A family tree that works out what everyone is to you, instead of asking you to type it in.</p>
-    <div class="go">
-      <a class="primary" href="/app">Open heriTrac</a>
-      <a class="plain" href="/heritrac.html" download>Download the single file</a>
-    </div>
-    <hr class="rule">
-  </header>
+    <div class="go"><a class="btn btn-go" href="/app">Open heriTrac</a></div>
+  </div>
 
-  <section>
-    <span class="num">01 / What it is</span>
+  <section class="sec">
+    <span class="lab">What it is</span>
     <h2>You record who is related to whom. It works out the rest.</h2>
     <p class="body">
       Add a parent, a partner, a child or a sibling, and every other word follows from
@@ -134,8 +162,8 @@
     </p>
   </section>
 
-  <section>
-    <span class="num">02 / What it keeps</span>
+  <section class="sec">
+    <span class="lab">What it keeps</span>
     <h2>Nothing.</h2>
     <dl>
       <dt>No account</dt>
@@ -147,8 +175,8 @@
     </dl>
   </section>
 
-  <section>
-    <span class="num">03 / What is coming</span>
+  <section class="sec">
+    <span class="lab">What is coming</span>
     <h2>Shareable links, as an option.</h2>
     <p>
       A link you can send to a relative so they can look at the family, and sign in if
@@ -157,8 +185,8 @@
     </p>
   </section>
 
-  <section>
-    <span class="num">04 / Tell me it is wrong</span>
+  <section class="sec">
+    <span class="lab">Tell me it is wrong</span>
     <h2>Especially if a word for a relative is off.</h2>
     <p>
       Kinship words differ between languages and between families. If heriTrac calls
@@ -178,15 +206,16 @@
         <label for="f-bot">Leave this empty</label>
         <input id="f-bot" type="checkbox" name="botcheck" tabindex="-1" autocomplete="off">
       </div>
-      <button type="submit">Send</button>
+      <div class="go"><button class="btn btn-go" type="submit">Send</button></div>
     </form>
   </section>
 
-  <footer>
-    Built by <a href="https://pranavrajendran.com">Pranav Rajendran</a>.
-    Source on <a href="https://github.com/TheKimi7/heritrac">GitHub</a>.
-  </footer>
+</main>
 
-</div>
+<footer>
+  Built by <a href="https://pranavrajendran.com">Pranav Rajendran</a>.
+  Source on <a href="https://github.com/TheKimi7/heritrac">GitHub</a>.
+</footer>
+
 </body>
 </html>
