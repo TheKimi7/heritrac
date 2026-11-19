@@ -11,6 +11,13 @@
         { "key": "Referrer-Policy", "value": "no-referrer" },
         { "key": "Permissions-Policy", "value": "geolocation=(), camera=(), microphone=(), interest-cohort=()" }
       ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "staging.heritrac.pranavrajendran.com" }],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+      ]
     }
   ]
 }
