@@ -30,7 +30,7 @@
   --warn:        #242424;
   --warn-soft:   #dedede;
   --shadow:      0 1px 2px rgba(0, 0, 0, .07), 0 8px 24px rgba(0, 0, 0, .08);
-  --ui: "Hanken Grotesk", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ui: "Google Sans", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --tamil: "Noto Sans Tamil", var(--ui);
   --r-card: 14px;
   --r-node: 13px;

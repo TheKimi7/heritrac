@@ -26,7 +26,7 @@ const ICON = '<link rel="icon" href="data:image/svg+xml;base64,' +
 
 const FONTS = '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
   '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?' +
-  'family=Hanken+Grotesk:wght@400;500;600&family=Noto+Sans+Tamil:wght@400;500&display=swap">';
+  'family=Google+Sans:wght@400;500;600&family=Noto+Sans+Tamil:wght@400;500&display=swap">';
 
 // The page carries its own content security policy, built from the hash of
 // the exact script going into it. It is the backstop behind React's escaping
