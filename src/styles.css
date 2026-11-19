@@ -1,0 +1,654 @@
+/* A calm working surface. One sidebar on the left holding controls and
+   whatever is selected, the canvas filling everything else. Depth comes from
+   quiet fills and one hairline, not from heavy borders or glow. Nothing
+   animates except the pointer feedback you need to see. */
+:root {
+  /* Monochrome on purpose. Every colour here is a neutral grey: the hue and
+     saturation are zero, so nothing picks up a cast on a wide-gamut screen.
+     The earlier palette was a blue slate at hue 210 with a warning in olive,
+     and both read as a tint rather than as grey. Lightness is unchanged from
+     that palette, so every contrast ratio it was built around still holds. */
+  --bg:          #f0f0f0;
+  --surface:     #ffffff;
+  --surface-2:   #f7f7f7;
+  --surface-3:   #ededed;
+  --line:        #dbdbdb;
+  --line-soft:   #ebebeb;
+  --text:        #242424;
+  /* Three tiers, each far enough from the next to read as a tier, and each
+     clearing 4.5:1 on the fill it sits on. The faint tier carries the section
+     labels, which are 10.5px: the old value was 2.85:1 on white, which is
+     under the line for text that small. */
+  --muted:       #5a5a5a;
+  --faint:       #717171;
+  --accent:      #2b2b2b;
+  --accent-soft: #e6e6e6;
+  --accent-text: #242424;
+  --on-accent:   #ffffff;
+  /* With no colour to spend, "unsure" is said with full-strength text against
+     the muted grey around it, and with a dotted underline on the chip. */
+  --warn:        #242424;
+  --warn-soft:   #dedede;
+  --shadow:      0 1px 2px rgba(0, 0, 0, .07), 0 8px 24px rgba(0, 0, 0, .08);
+  --ui: "Hanken Grotesk", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --tamil: "Noto Sans Tamil", var(--ui);
+  --r-card: 14px;
+  --r-node: 13px;
+  --r-pill: 999px;
+  /* One spacing scale, in multiples of four, so the panel keeps a rhythm
+     instead of a different margin per rule. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --gut-l: max(16px, env(safe-area-inset-left, 0px));
+  --gut-r: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:          #141414;
+    --surface:     #1e1e1e;
+    --surface-2:   #242424;
+    --surface-3:   #2e2e2e;
+    --line:        #363636;
+    --line-soft:   #292929;
+    --text:        #ededed;
+    --muted:       #b8b8b8;
+    --faint:       #959595;
+    --accent:      #ebebeb;
+    --accent-soft: #333333;
+    --accent-text: #f5f5f5;
+    --on-accent:   #171717;
+    --warn:        #ededed;
+    --warn-soft:   #3d3d3d;
+    --shadow:      0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141414; --surface: #1e1e1e; --surface-2: #242424; --surface-3: #2e2e2e;
+  --line: #363636; --line-soft: #292929; --text: #ededed; --muted: #b8b8b8;
+  --faint: #959595; --accent: #ebebeb; --accent-soft: #333333; --accent-text: #f5f5f5;
+  --on-accent: #171717;
+  --warn: #ededed; --warn-soft: #3d3d3d;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 14px/1.5 var(--ui);
+  -webkit-text-size-adjust: 100%;
+  overflow: hidden;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The canvas fills the window and everything else floats over it: the name
+   and its menu button at the top left, the panel below that, the zoom and
+   add controls at the bottom right. */
+.app { position: relative; height: 100%; overflow: hidden; }
+
+.brandbar {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  top: max(12px, env(safe-area-inset-top, 0px));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 46px;
+  padding: 0 16px 0 7px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.burger {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.burger:hover { background: var(--surface-2); color: var(--text); }
+.brandname { font-size: 16px; font-weight: 600; letter-spacing: -.2px; }
+
+.dock {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 9;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+.dockbtn {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 50%;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: var(--shadow);
+}
+.dockbtn:hover { color: var(--accent); border-color: var(--accent); }
+.dockbtn-add {
+  width: 52px;
+  height: 52px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  margin: 4px 0;
+}
+.dockbtn-add:hover { background: var(--text); border-color: var(--text); color: var(--on-accent); }
+
+/* --------------------------------------------------------------- sidebar */
+.side {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  top: 70px;
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  width: 332px;
+  z-index: 8;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 14px;
+}
+.side-head { padding: var(--sp-4) var(--gut-r) var(--sp-4) var(--gut-l); border-bottom: 1px solid var(--line-soft); }
+.side-head p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+.viewing {
+  margin: 14px var(--gut-r) 0 var(--gut-l);
+  padding: 12px 14px;
+  background: var(--accent-soft);
+  border-radius: var(--r-card);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+.viewing b { display: block; font-size: 15px; font-weight: 600; color: var(--accent-text); }
+.viewing span { font-size: 12px; color: var(--muted); }
+
+.side-sec { padding: var(--sp-4) var(--gut-r) var(--sp-4) var(--gut-l); border-bottom: 1px solid var(--line-soft); }
+.side-sec.grow { flex: 1 0 auto; }
+.lab {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: var(--sp-2);
+}
+.text {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  padding: 9px 14px;
+  min-width: 0;
+}
+select.text { border-radius: 10px; }
+.note { margin: var(--sp-2) 0 0; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+/* Monochrome, so a warning note is said by weight against the muted grey
+   around it rather than by hue. */
+.note.warn { color: var(--warn); font-weight: 500; }
+
+/* One rhythm for every panel section, rather than a margin per component:
+   a label sits close to what it labels, and separate things stand further
+   apart. Two paragraphs in a row are the exception and stay tight. */
+.side-sec > * + * { margin-top: var(--sp-3); }
+.side-sec > .lab { margin-bottom: 0; }
+.side-sec > .lab + * { margin-top: var(--sp-2); }
+.side-sec > .note + .note { margin-top: var(--sp-2); }
+.row { display: flex; gap: var(--sp-2); align-items: center; }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.btns.one { grid-template-columns: 1fr; }
+.btns .btn { width: 100%; text-align: center; }
+.btns .text { width: 100%; }
+.row.wrap { flex-wrap: wrap; }
+.row .text { flex: 1 1 auto; }
+.num { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 1.4em; text-align: right; }
+input[type="range"] { flex: 1 1 auto; accent-color: var(--accent); }
+
+.btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--line); background: var(--surface-3); }
+.btn-go { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-go:hover { background: var(--text); border-color: var(--text); color: var(--on-accent); }
+/* The buttons that commit a change to the person on screen: shaded so they
+   read as the action of their block, without shouting like the add button. */
+.btn-tint { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent-text); font-weight: 500; }
+.btn-tint:hover { background: var(--surface-3); border-color: var(--line); }
+/* Undoing something, in a palette with no red to say so. The border is
+   dashed instead, which reads as "this one is different" at a glance and
+   survives being printed, dimmed or read by somebody who cannot see colour. */
+.btn-warn { color: var(--warn); border-style: dashed; border-color: var(--line); }
+.btn-warn:hover { border-color: var(--text); }
+/* A secondary action that should not compete with the buttons above it. */
+.btn-quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--muted);
+  padding-left: 0;
+  padding-right: 0;
+}
+.btn-quiet:hover { background: none; border-color: transparent; color: var(--text); text-decoration: underline; }
+
+.hits { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
+.hit {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  padding: 7px 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hit:hover { background: var(--surface-2); }
+.hit span { color: var(--faint); font-size: 12px; }
+
+.detail h2 { margin: 0; font-size: 19px; font-weight: 600; }
+.detail .big { margin: var(--sp-1) 0 0; font-size: 22px; font-weight: 600; color: var(--accent-text); letter-spacing: -.3px; }
+.detail .big.warn { color: var(--warn); }
+.kv { display: grid; grid-template-columns: 76px 1fr; gap: var(--sp-1) 10px; margin: var(--sp-3) 0; font-size: 12.5px; }
+.kv dt { color: var(--faint); }
+.kv dd { margin: 0; }
+.kv .mono { font-size: 11.5px; color: var(--muted); }
+.stack { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.stack .row .text { min-width: 0; }
+.links { list-style: none; margin: 0 0 var(--sp-3); padding: 0; display: grid; gap: var(--sp-1); }
+.links li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 6px 6px 6px 11px;
+  font-size: 12.5px;
+}
+.links-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.links-how { color: var(--faint); font-size: 11.5px; white-space: nowrap; }
+.links .btn { padding: 4px 10px; font-size: 11.5px; }
+
+.alts { margin: var(--sp-3) 0; display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.alts .lab { margin: 0 4px 0 0; }
+.chip {
+  display: inline-block;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* Two marks that have to be told apart without colour, so they are told
+   apart by line: a word of your own is ringed, a word the app is unsure of is
+   underlined the way a spell checker underlines a word it queries. */
+.chip-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.chip-pin { outline: 1px dashed currentColor; outline-offset: 1px; }
+
+/* ----------------------------------------------------------------- stage */
+.stage { position: absolute; inset: 0; background: var(--bg); }
+.react-flow { background: var(--bg); }
+/* Standing in for React Flow's own corner badge, which is turned off in
+   favour of this. Centred along the bottom of the canvas and kept quiet, so
+   it reads as a credit rather than as a control. It sits above the canvas but
+   takes no pointer events, apart from the link itself, so it never swallows a
+   click meant for a card underneath. */
+.credit {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: 4;
+  opacity: .3;
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+.credit a { color: inherit; pointer-events: auto; text-decoration: none; border-bottom: 1px solid currentColor; }
+.credit a:hover { color: var(--text); }
+/* The one spot of colour left in the interface, and deliberately so: it was
+   asked for as an emoji, and greyscaling it turned the brain into a smudge at
+   this size. Thirty percent opacity is what keeps it quiet instead. */
+.credit-mark { font-size: 12px; }
+.grid { color: var(--line); opacity: .55; }
+.react-flow__node { cursor: pointer; }
+.react-flow__handle { border: 0; min-width: 0; min-height: 0; }
+
+/* ------------------------------------------------------------------ card */
+.card {
+  position: relative;
+  width: 212px;
+  height: 86px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-node);
+  box-shadow: var(--shadow);
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+/* Clipped here rather than on the card, which would cut off the four drag
+   handles: they sit twelve pixels outside its edge. */
+.card-top { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; overflow: hidden; }
+/* A name wraps rather than being cut off with an ellipsis. Somebody's name is
+   the one thing on a card that should never be guessed at from half of it.
+   overflow-wrap: anywhere is there for the name that is one long word with
+   nowhere to break, which would otherwise run out past the card edge. */
+.card-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -.15px;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* Past about two full lines, the type steps down instead of the name being
+   lost. Counted in characters, not measured, so it costs nothing and cannot
+   disagree with the height the card was declared to have. */
+.card-name.is-long { font-size: 12.5px; letter-spacing: -.1px; }
+.card-name.is-vlong { font-size: 11px; letter-spacing: 0; }
+.card-age { font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; flex: none; }
+.card-bottom { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.card-ta { font-family: var(--tamil); font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; }
+.card.is-ego { border-color: var(--accent); border-width: 1.5px; background: var(--accent-soft); }
+.card.is-ego .card-name { color: var(--accent-text); }
+.card.is-sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow); }
+.card.is-dim { opacity: .34; }
+.card.is-lit { opacity: 1; border-color: var(--accent); }
+.card.is-faded { opacity: .45; }
+.card.is-faded.is-lit { opacity: 1; }
+.card.is-dead { border-style: dashed; }
+
+/* One control on each side, which is both the add button and the point you
+   drag from. A tap adds, a drag links. */
+.plus {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  box-shadow: var(--shadow);
+  z-index: 3;
+  min-width: 0;
+  min-height: 0;
+}
+.plus-mark { pointer-events: none; margin-top: -1px; }
+.card:hover .plus, .card.is-sel .plus, .plus:focus-visible { opacity: 1; }
+.plus:hover { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.plus.is-shut { width: 11px; height: 11px; box-shadow: none; background: var(--line); border: 0; }
+.plus.is-shut:hover { background: var(--accent); }
+.react-flow__handle.plus-t { top: -12px; left: 50%; transform: translateX(-50%); }
+.react-flow__handle.plus-b { bottom: -12px; top: auto; left: 50%; transform: translateX(-50%); }
+.react-flow__handle.plus-l { left: -12px; top: 50%; transform: translateY(-50%); }
+.react-flow__handle.plus-r { right: -12px; left: auto; top: 50%; transform: translateY(-50%); }
+.react-flow__handle.plus-t.is-shut { top: -6px; }
+.react-flow__handle.plus-b.is-shut { bottom: -6px; }
+.react-flow__handle.plus-l.is-shut { left: -6px; }
+.react-flow__handle.plus-r.is-shut { right: -6px; }
+.react-flow__handle.connectingfrom, .react-flow__handle.connectingto { opacity: 1; background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.knob-hidden { opacity: 0 !important; width: 1px; height: 1px; min-width: 0; min-height: 0; background: none; border: 0; }
+
+.knot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+}
+.knot.is-lit { border-color: var(--accent); background: var(--accent); }
+.knot.is-dim { opacity: .35; }
+
+/* ----------------------------------------------------------------- lines */
+.react-flow__edge-path { stroke: var(--line); stroke-width: 1.5; }
+.line.is-lit .react-flow__edge-path { stroke: var(--accent); stroke-width: 2.4; }
+.line-spouse .react-flow__edge-path { stroke-width: 2; }
+.react-flow__edge { pointer-events: none; }
+.react-flow__connectionline .react-flow__connection-path { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 4; }
+
+/* ------------------------------------------------------------- overlays */
+.bandrail { position: absolute; inset: 0 auto 0 0; width: 0; pointer-events: none; }
+.bandrail span {
+  position: absolute;
+  left: calc(14px + env(safe-area-inset-left, 0px));
+  transition: none;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--faint);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+}
+
+.react-flow__controls {
+  display: grid;
+  gap: 6px;
+  box-shadow: none;
+  right: 16px;
+  bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+}
+.react-flow__controls-button {
+  width: 34px;
+  height: 34px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  box-shadow: var(--shadow);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.react-flow__controls-button:hover { border-color: var(--accent); color: var(--accent); }
+.react-flow__controls-button svg { width: 13px; height: 13px; fill: currentColor; }
+
+.app.side-open .bandrail span { left: 360px; }
+.bandrail span:first-child { }
+
+.addform {
+  position: fixed;
+  width: 260px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  display: grid;
+  gap: 9px;
+  z-index: 20;
+}
+.addform-head { margin: 0; font-size: 12.5px; color: var(--muted); }
+.addform-head b { color: var(--text); }
+.addform input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.addform-with { font-size: 12px; color: var(--muted); display: grid; gap: 5px; }
+.addform-with select { width: 100%; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 10px; padding: 7px 10px; }
+.addform-row { display: flex; gap: 8px; }
+.seg { display: flex; background: var(--surface-2); border-radius: var(--r-pill); padding: 3px; gap: 3px; }
+.seg button {
+  flex: 1 1 0;
+  background: none;
+  border: 0;
+  border-radius: var(--r-pill);
+  padding: 7px 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.seg button.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+
+.toast {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 22px;
+  background: var(--text);
+  color: var(--bg);
+  padding: 9px 16px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  z-index: 25;
+  box-shadow: var(--shadow);
+}
+
+/* A tray along the bottom, for asking something short. The JSON dialog used
+   to look like this and outgrew it. */
+.bar {
+  position: fixed;
+  inset: auto 0 0 0;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding: var(--sp-4) var(--gut-r) calc(18px + env(safe-area-inset-bottom, 0px)) var(--gut-l);
+  display: grid;
+  gap: var(--sp-3);
+  z-index: 30;
+  box-shadow: var(--shadow);
+}
+
+/* The JSON dialog. A whole family is a document, so it gets a dialog with
+   room to read in, and the text scrolls inside a frame that never grows past
+   the window. The backdrop both dims the canvas and catches the click that
+   dismisses the thing. */
+.sheet-back {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5) var(--gut-r) calc(var(--sp-5) + env(safe-area-inset-bottom, 0px)) var(--gut-l);
+  background: rgba(0, 0, 0, .45);
+}
+.sheet {
+  /* Narrow and tall, because that is the shape of the thing inside it. The
+     JSON is deeply indented but its lines are short, so width past about 40
+     monospace characters buys nothing and only shortens the box. */
+  width: min(520px, 100%);
+  /* minmax(0, 1fr) on the middle row, not 1fr: a grid row refuses to shrink
+     below the content it holds otherwise, and the textarea would push the
+     buttons off the bottom of a short window instead of scrolling. */
+  /* A set height, not a maximum. With max-height the box sizes to its
+     content, the middle row stays auto, and the textarea's height of 100%
+     resolves against nothing, so the dialog came out a third of the size it
+     should be. */
+  height: min(900px, 90vh);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.sheet > .note { margin: 0; }
+.sheet textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: 400 11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text);
+  resize: none;
+  overflow: auto;
+  tab-size: 2;
+}
+.sheet-foot { justify-content: flex-end; }
+/* The one colour the browser still supplies by itself. Everything else here
+   is grey, so a blue selection band across the JSON stands out as the odd
+   one. */
+::selection { background: var(--accent-soft); color: var(--text); }
+
+@media (max-width: 900px) {
+  .side {
+    left: 8px;
+    right: 8px;
+    top: auto;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: 62%;
+  }
+  .app.side-open .bandrail span { left: calc(14px + env(safe-area-inset-left, 0px)); }
+  .bandrail span { font-size: 10px; }
+  .brandbar { height: 42px; padding-right: 13px; }
+  .brandname { font-size: 15px; }
+  .dock { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .dockbtn { width: 38px; height: 38px; }
+  .dockbtn-add { width: 48px; height: 48px; }
+  /* Nearly the whole window on a phone, where a centred box would leave
+     slivers of canvas round the edges and little room for the text. */
+  .sheet-back { padding: var(--sp-2) var(--sp-2) calc(var(--sp-2) + env(safe-area-inset-bottom, 0px)); }
+  .sheet { width: 100%; max-height: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

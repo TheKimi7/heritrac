@@ -1,0 +1,10 @@
+node_modules/
+
+# Everything the build makes. dist/ is the website and is rebuilt on deploy;
+# build/ also holds the artifact page and the test page, neither of which is
+# published.
+build/
+dist/
+
+.vercel
+.DS_Store
