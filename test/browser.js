@@ -31,6 +31,10 @@ var SEEDED = JSON.stringify({
 });
 try { localStorage.setItem("heritrac.tree.v2", SEEDED); } catch (e) {}
 try { localStorage.setItem("heritrac.tree.v1", SEEDED); } catch (e) {}
+// The tour greets a first time reader on its own. Marked as already seen
+// here, or it would open over the whole run and swallow every click below.
+// The checks drive it by hand further down instead.
+try { localStorage.setItem("heritrac.tour.seen", "1"); } catch (e) {}
 
 var VIOLATIONS = [];
 document.addEventListener("securitypolicyviolation", function (e) {
@@ -175,9 +179,9 @@ window.__XSS__ = 0;
       click(document.getElementById("burger"));
       await tick(120);
       ok("and brings it back", sideShown());
-      ok("the dock reads zoom in, zoom out, add, fit",
+      ok("the dock reads zoom in, zoom out, add, tour, fit",
         [].map.call(document.querySelectorAll(".dock button"), function (b) { return b.id; }).join(",") ===
-        "zoomin,zoomout,dockadd,fit",
+        "zoomin,zoomout,dockadd,tour,fit",
         [].map.call(document.querySelectorAll(".dock button"), function (b) { return b.id; }).join(","));
 
       var transform = function () { return document.querySelector(".react-flow__viewport").style.transform; };
@@ -948,9 +952,17 @@ window.__XSS__ = 0;
       ok("and the panel is left the way it was found",
         (!document.querySelector(".side").hidden) === sideWas,
         "was " + sideWas + ", now " + (!document.querySelector(".side").hidden));
-      ok("the tour wrote nothing to storage",
-        (localStorage.length + ":" + sessionStorage.length) === storeBefore,
-        storeBefore + " before, " + localStorage.length + ":" + sessionStorage.length + " after");
+      // The tour remembers that it has been shown, and that is the only thing
+      // this app keeps between visits. Nothing about the family may join it.
+      var kept = [];
+      for (var ki = 0; ki < localStorage.length; ki++) kept.push(localStorage.key(ki));
+      ok("the only thing kept is the flag saying the tour has been seen",
+        kept.length === 1 && kept[0] === "heritrac.tour.seen", kept.join(", ") || "nothing");
+      ok("and no part of the family is in storage",
+        localStorage.getItem("heritrac.tour.seen") === "1" &&
+        JSON.stringify(localStorage).indexOf("Chola") < 0 &&
+        sessionStorage.length === 0,
+        "session " + sessionStorage.length);
 
       ok("still no script errors", errors.length === 0, errors.join(" | "));
       ok("and the canvas settled without a stuck resize loop", observerNotices < 3,

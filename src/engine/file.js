@@ -13,6 +13,13 @@
 // Every key an older build may have written. All of them go on start.
 export const STORE_PREFIX = "heritrac.";
 
+// The one thing this app remembers between visits, and the only exception to
+// everything said above: a flag saying the tour has been shown once, so it
+// does not greet the same reader every time. It holds no family data, says
+// nothing about who the reader is, and is skipped by forget() below, which
+// otherwise clears the prefix wholesale.
+export const TOUR_SEEN = "heritrac.tour.seen";
+
 // Files written before naming systems were dropped carry a `settings.pack`.
 // They still open: the field is read past and left out of the tree, so such a
 // file reads in English like any other, which is the only way to read one now.
@@ -178,7 +185,7 @@ export function forget() {
     const stale = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.indexOf(STORE_PREFIX) === 0) stale.push(key);
+      if (key && key.indexOf(STORE_PREFIX) === 0 && key !== TOUR_SEEN) stale.push(key);
     }
     stale.forEach((key) => localStorage.removeItem(key));
     return stale.length;

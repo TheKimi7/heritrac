@@ -674,7 +674,6 @@ input[type="range"] { flex: 1 1 auto; accent-color: var(--accent); }
   padding: 0;
 }
 .clearbtn:hover { color: var(--text); border-color: var(--line); }
-.tourbtn { font-size: 13px; padding-left: 6px; padding-right: 6px; margin-left: 2px; }
 
 /* The tour. The ring is a hole in a single large shadow, so there is one
    element to place instead of four edges to keep aligned. */

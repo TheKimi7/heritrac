@@ -12,8 +12,7 @@ import { tidy, NODE_W, NODE_H, ROW, KNOT } from "../engine/layout.js";
 import * as M from "../engine/mutate.js";
 import {
   normalise, emptyTree, serialise, fileName, embedded,
-  forget, readFamily, fingerprint
-} from "../engine/file.js";
+  forget, readFamily, fingerprint, TOUR_SEEN } from "../engine/file.js";
 import { formatDate } from "../engine/dates.js";
 import { PersonNode, UnionNode } from "./PersonNode.jsx";
 import { AddForm } from "./AddForm.jsx";
@@ -37,7 +36,8 @@ const Icon = {
   plus: "M10 4v12M4 10h12",
   minus: "M4 10h12",
   fit: "M4 7V4h3M16 7V4h-3M4 13v3h3M16 13v3h-3",
-  cross: "M5 5l10 10M15 5L5 15"
+  cross: "M5 5l10 10M15 5L5 15",
+  bulb: "M7.4 12.1a4.4 4.4 0 1 1 5.2 0c-.6.5-1 1.1-1 1.9H8.4c0-.8-.4-1.4-1-1.9ZM8.3 16h3.4M9 18h2"
 };
 
 // The tour. It never starts on its own and remembers nothing it has shown:
@@ -60,7 +60,7 @@ const TOUR = [
   {
     sel: "#dockadd",
     title: "Or start somebody loose",
-    body: "New card adds a person joined to nobody, ready to link up later. The two buttons above it zoom, and the one below fits the whole family on screen."
+    body: "New card adds a person joined to nobody, ready to link up later. The two above it zoom, and below it sit this tour and a button that fits the whole family on screen."
   },
   {
     sel: "#clear",
@@ -82,7 +82,7 @@ const TOUR = [
     sel: "#dl",
     side: true,
     title: "Download before you close the tab",
-    body: "Nothing is kept anywhere: not on a server, and not in this browser either. The family lives in this tab alone, so it goes when the tab does unless you download it first."
+    body: "Your family is never kept anywhere: not on a server, and not in this browser. It lives in this tab alone, so it goes when the tab does unless you download it first."
   },
   {
     sel: "#sample",
@@ -572,7 +572,25 @@ function Flow() {
     setTreeSaved(emptyTree(), "Cleared. Start with yourself.");
   });
 
-  const startTour = () => { setSpot(null); setTour({ i: 0, restore: sideOpen }); };
+  // Written as soon as the tour opens rather than when it finishes, so a
+  // reader who reloads in the middle of it is not shown the whole thing
+  // again from the top.
+  const markTourSeen = () => { try { localStorage.setItem(TOUR_SEEN, "1"); } catch (e) { /* blocked storage */ } };
+  const startTour = () => { markTourSeen(); setSpot(null); setTour({ i: 0, restore: sideOpen }); };
+
+  // The tour greets a first time reader by itself, once, and never again.
+  // This flag is the only thing the app remembers between visits. Where
+  // storage is blocked outright the tour stays on the bulb button rather
+  // than opening on every single load, which would be the worse failure.
+  useEffect(() => {
+    let seen = true;
+    try { seen = !!localStorage.getItem(TOUR_SEEN); } catch (e) { seen = true; }
+    if (seen) return undefined;
+    // Late enough that the family is laid out and there is something to ring.
+    const hello = setTimeout(() => { markTourSeen(); setTour({ i: 0, restore: sideOpen }); }, 800);
+    return () => clearTimeout(hello);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Leaving puts the panel back the way the reader had it, since the tour
   // opens and closes it to reach what each step points at.
   const endTour = () => {
@@ -652,7 +670,6 @@ function Flow() {
           onClick={() => setSideOpen(!sideOpen)}
         ><Glyph d={Icon.burger} /></button>
         <span className="brandname">heriTrac</span>
-        <button className="btn btn-quiet tourbtn" id="tour" onClick={startTour}>Tour</button>
         {dirty && <span className="chip chip-warn" id="unsaved">Unsaved</span>}
       </div>
 
@@ -925,7 +942,7 @@ function Flow() {
               guard("Opening a file replaces the family on screen.", () => onFile(file));
             }}
           />
-          <p className="note">Nothing is stored, here or anywhere else. The family lives in this tab alone, so download it before you close the tab.</p>
+          <p className="note">Your family is never stored, here or anywhere else. It lives in this tab alone, so download it before you close the tab.</p>
         </div>
       </aside>
 
@@ -992,6 +1009,8 @@ function Flow() {
               });
             }}
           ><Glyph d={Icon.plus} size={22} /></button>
+          <button className="dockbtn" id="tour" title="Show me around" aria-label="Show me around"
+            onClick={startTour}><Glyph d={Icon.bulb} /></button>
           <button className="dockbtn" id="fit" title="Fit the whole family" aria-label="Fit the whole family"
             onClick={() => flow.fitView({ padding: 0.2, duration: 0 })}><Glyph d={Icon.fit} /></button>
         </div>

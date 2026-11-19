@@ -11,11 +11,16 @@ graph, and no relationship is ever stored anywhere.
 It runs entirely in the browser. Nothing is uploaded, there is no account and
 there is no server.
 
-**Nothing is stored on your machine either.** The tree lives in the tab and
-nowhere else: no local storage, no cookies, no IndexedDB. Every visit starts
-from the sample family, and the only copy that outlives the tab is the JSON
-file you download yourself. Close the tab and the page has left nothing
-behind.
+**Your family is never stored on your machine either.** The tree lives in the
+tab and nowhere else: no local storage, no cookies, no IndexedDB. Every visit
+starts from the sample family, and the only copy that outlives the tab is the
+JSON file you download yourself. Close the tab and the page has kept nothing
+about the people in it.
+
+There is exactly one exception, and it holds no family data: a flag recording
+that the tour has been shown, so a reader who has seen it is not greeted again
+on every visit. `forget()` clears the whole `heritrac.` prefix on start apart
+from that one key.
 
 That is a deliberate trade, and the cost is real: a reload loses the family.
 The app warns you on the way out, and the limits of that warning are in
